@@ -1,0 +1,559 @@
+<html>
+<head>
+<meta charset=utf-8>
+<style>
+@-webkit-keyframes fadeIn {0% {opacity: 0;} 50% {opacity: 0;} 100% {opacity: 1;}}
+.body{-webkit-animation: fadeIn 2s 1 0s;}
+body{background:rgb(215,215,215);}
+.show{font-size:120px;}
+.jxgbox {
+    position: relative;
+    overflow: hidden;
+    background-color: #fff;
+    border-style: solid;
+    border-width: 1px;
+    border-color: #356aa0;
+    border-radius: 10px;
+    margin: 0;
+    -webkit-border-radius: 10px;
+    -ms-touch-action: none;
+}
+</style>
+<script src="jsxgraphcore.js"></script>
+<body>
+<div style="width: 50%;margin-left: auto;margin-right: auto;">
+<div id="title" style="font-size:35px;text-align:center"></div>
+<div id="JXGboard" class="jxgbox" style="width:920px; height:690px;"></div>
+</div>
+</body>
+</html>
+<script>
+class Board{
+	constructor(title,callback,offset=[0,0],scale=1){
+		let that=this;
+		return function(len){
+			let range=[-4, 3, 4, -3].map((c,i)=>(c+offset[i%2])/scale);
+			document.getElementById('title').innerHTML=`[${len}]${title}`;
+			that.board=JXG.JSXGraph.initBoard('JXGboard', {boundingbox:range, showcopyright: false, shownavigation: false});
+			//that.board.options.label.autoPosition = true;
+			that.board.options.point.size = 4;
+			that.board.options.text.fontSize = 24;
+			that.board.options.point.fixed = true;
+			that.board.options.point.color = 'blue';
+			let position=(function(){
+				let v=that.board.attr.boundingbox;
+				return [(4*v[2]+v[0])/5,(8*v[3]+v[1])/9];
+			}());
+			that.butt=that.board.create('button', [...position,'显示解法',function(){
+				let txt;
+				this.value = !this.value;
+				if(this.value){
+					txt = '隐藏解法';
+				}else{
+					txt = '显示解法';
+				};
+				this.rendNodeButton.innerHTML=txt;
+			}]);
+			that.rotate=function(center,angle,rate=1,board=that.board){
+				let t1=board.create('transform', [-center.X(),-center.Y()], {type: 'translate'});
+				let t2=board.create('transform', [angle], {type: 'rotate'});
+				let t3 = board.create('transform', [rate,rate], {type: 'scale'});
+				let t4=board.create('transform', [center.X(),center.Y()], {type: 'translate'});
+				return [t1,t2,t3,t4];
+			};
+			callback(that.board,that.butt,that.rotate);
+		};
+	}
+};
+function ppt(T){
+	let go=(function(){
+		let len=T.length-1;
+		return function(n='up'){
+			switch(true){
+				case n==='up':
+				len=(len+1)%T.length;
+				break;
+				case n==='down':
+				len=(len+T.length-1)%T.length;
+				break;
+				case n<0:
+				len=0;
+				break;
+				case n>T.length-1:
+				len=T.length-1;
+				break;
+				default:
+				len=n*1;
+			};
+			T[len](len);
+			document.body.className='body';
+		};
+	}());
+	document.addEventListener('click',(function(){
+		go();
+		document.body.className='body';
+		return function(){
+			let winWidth=document.body.clientWidth||document.documentElement.clientWidth;
+			let xx=event.clientX/winWidth-.5;
+			if(xx>0.375){
+				go();
+			};
+			if(xx<-0.375){
+				go('down');
+			};
+		};
+	}()),false);
+	document.addEventListener('keydown',()=>{
+		if(event.keyCode===32){
+			go();
+			event.preventDefault();
+		};
+		if(event.keyCode===13){
+			go(prompt(`请输入页面编号：0-${T.length-1}`));
+			event.preventDefault();
+		};
+	},false);
+	document.addEventListener('animationend',()=>{document.body.className='';},false);
+};
+let x=[
+	new Board('将军饮马：AP+BP最小值',function(board,butt){
+		let l=board.create('line',[[0,0],[1,0]],{fixed:true});
+		let A=board.create('point',[-2,.5]);
+		let B=board.create('point',[2,2]);
+		let P=board.create('glider', [l],{color:'green',fixed:false,size:4,name:'P'});
+		let AP=board.create('segment', [A,P]);
+		let BP=board.create('segment', [B,P]);
+		let C=board.create('reflection', [A, l],{name:'C',visible:()=>butt.value});
+		let CP=board.create('segment', [C,P],{color:'blue',dash:3,visible:()=>butt.value});
+		let CB=board.create('segment', [C,B],{color:'black',dash:1,visible:()=>butt.value});
+	}),
+	new Board('将军反饮马：|AP-BP|的最大值',function(board,butt){
+		let l=board.create('line',[[0,0],[1,0]],{fixed:true});
+		let A=board.create('point',[-2,-.5]);
+		let B=board.create('point',[2,2]);
+		let P=board.create('glider', [l],{color:'green',fixed:false,name:'P'});
+		let AP=board.create('segment', [A,P]);
+		let BP=board.create('segment', [B,P]);
+		let C=board.create('reflection', [A, l],{name:'C',visible:()=>butt.value});
+		let CP=board.create('segment', [C,P],{color:'blue',dash:3,visible:()=>butt.value});
+		let CB=board.create('segment', [C,B],{color:'black',dash:1,visible:()=>butt.value});
+	}),
+	new Board('手拉手全等：ME最小值',function(board,butt,rotate){
+		let A=board.create('point',[0,2]);
+		let B=board.create('point',[-2,0]);
+		let C=board.create('point',[2,0]);
+		
+		let BC=board.create('segment', [B,C]);
+		
+		let D=board.create('glider', [-1.5,0,BC],{color:'green',fixed:false});
+		let E=board.create('point', [D,rotate(A,Math.PI/2)]);
+		
+		let AB=board.create('segment', [A,B]);
+		let AC=board.create('segment', [A,C]);
+		let AD=board.create('segment', [A,D]);
+		let AE=board.create('segment', [A,E]);
+		let DE=board.create('segment', [D,E]);
+		
+		let M=board.create('midpoint',[AC],{name:'M'});
+		let N=board.create('midpoint',[AB],{name:'N',visible:()=>butt.value});
+		
+		let ME=board.create('segment', [M,E],{color:'black'});
+		let ND=board.create('segment', [N,D],{color:'black',dash:1,visible:()=>butt.value});
+		
+		board.create('polygon', [A, N, D],{color:'red',visible:()=>butt.value});
+		board.create('polygon', [A, M, E],{color:'red',visible:()=>butt.value});
+	},[0,2]),
+	new Board('手拉手相似：FC最小值',function(board,butt,rotate){
+		let c=board.create('circle',[[0,-1],2.5],{fixed:true,visible:false});
+		let A=board.create('glider',[-2,2,c]);
+		let B=board.create('glider',[-2,-1,c]);
+		let C=board.create('glider',[2.5,-1,c]);
+		
+		let BC=board.create('segment', [B,C]);
+		
+		let D=board.create('glider', [-1.5,0,BC],{color:'green',fixed:false});
+		let AB=board.create('segment', [A,B]);
+		let AC=board.create('segment', [A,C]);
+		
+		let E=board.create('point', [D,rotate(A,Math.PI/2,AC.L()/AB.L())]);
+		
+		let AD=board.create('segment', [A,D]);
+		let AE=board.create('segment', [A,E]);
+		let DE=board.create('segment', [D,E]);
+		
+		let F=board.create('midpoint',[DE],{name:'F'});
+		let CF=board.create('segment', [C,F],{strokeColor:'black'});
+		
+		let CE=board.create('segment', [C,E],{color:'black',dash:1,visible:()=>butt.value});
+		let c2=board.create('circle', [F,E],{strokeColor:'black',dash:1,visible:()=>butt.value});
+	}),
+	new Board('两点对称勺子：PQ+QR+PR最小值',function(board,butt){
+		const optionShow1={strokeColor:'black',dash:1,visible:()=>butt.value};
+		const optionShow2={strokeColor:'red',dash:1,visible:()=>butt.value};
+		let O=board.create('point',[-1,-1],{name:'O'});
+		let Om=board.create('line',[O,[0,-1]],{straightFirst:false, straightLast:true});
+		let On=board.create('line',[O,[0,0]],{straightFirst:false, straightLast:true});
+		let A=board.create('point',[3,-1],{name:'A',visible:false});
+		let B=board.create('point',[Math.sqrt(8)-1,Math.sqrt(8)-1],{name:'B',visible:false});
+		let arc=board.create('arc',[O,A,B],{fixed:true,visible:false});
+		let P=board.create('glider',[2.67,0.6,arc],{name:'P',fixed:false,color:'green'});
+		
+		let R=board.create('glider', [Om],{color:'green',fixed:false,name:'R'});
+		let Q=board.create('glider', [On],{color:'green',fixed:false,name:'Q'});
+		let QP=board.create('segment',[Q,P]);
+		let QR=board.create('segment',[Q,R]);
+		let PR=board.create('segment',[R,P]);
+		let M=board.create('reflection', [P,Om],{name:'M',visible:()=>butt.value});
+		let N=board.create('reflection', [P,On],{name:'N',visible:()=>butt.value});
+		let MR=board.create('segment',[M,R],optionShow1);
+		let NQ=board.create('segment',[Q,N],optionShow1);
+		let MN=board.create('segment',[M,N],optionShow1);
+		let c=board.create('circle',[O,P],optionShow1);
+		let OP=board.create('segment',[O,P],optionShow2);
+		let OM=board.create('segment',[O,M],optionShow2);
+		let ON=board.create('segment',[O,N],optionShow2);
+		
+	}),
+	new Board('时钟模型：DH最小值',function(board,butt){
+		let A=board.create('point',[-2,2]);
+		let B=board.create('point',[-2,-2]);
+		let C=board.create('point',[2,-2]);
+		let D=board.create('point',[2,2]);
+		
+		let AB=board.create('segment',[A,B]);
+		let BC=board.create('segment',[C,B]);
+		let CD=board.create('segment',[C,D]);
+		let AD=board.create('segment',[A,D]);
+		
+		let E=board.create('glider', [-1,2,AD],{color:'green',fixed:false});
+		let l=board.create('line',[[0,0],[0,1]],{visible:false});
+		let F=board.create('reflection', [E,l]);
+		
+		let BD=board.create('segment',[D,B]);
+		let EB=board.create('segment',[E,B]);
+		let CF=board.create('segment',[C,F]);
+		
+		let G=board.create('intersection',[BD,CF]);
+		
+		let AG=board.create('segment',[A,G]);
+		
+		let H=board.create('intersection',[AG,EB]);
+		
+		let DH=board.create('segment',[D,H]);
+		
+		let O=board.create('point',[-2,0],{name:'O',visible:()=>butt.value});
+		
+		let OH=board.create('segment',[O,H],{strokeColor:'red',dash:1,visible:()=>butt.value});
+		let OD=board.create('segment',[O,D],{strokeColor:'red',dash:1,visible:()=>butt.value});
+		let c=board.create('circle',[O,H],{strokeColor:'black',dash:1,visible:()=>butt.value});
+	}),
+	new Board('时钟模型：OD最大值',function(board,butt,rotate){
+		let A=board.create('point',[-3,0]);
+		let B=board.create('point',[1,0]);
+		let C=board.create('point',[3,0]);
+		let O=board.create('point',[-1,0],{name:'O'});
+		
+		let c=board.create('circle',[O,A]);
+		
+		let P=board.create('glider', [0,2,c],{color:'green',fixed:false,name:'P'});
+		
+		let D=board.create('point', [P,rotate(C,-Math.PI/3,0.5)],{name:'D'});
+		let PC=board.create('segment',[P,C]);
+		let PD=board.create('segment',[P,D]);
+		let DC=board.create('segment',[D,C]);
+		let DO=board.create('segment',[D,O],{strokeColor:'black'});
+		let AB=board.create('segment',[A,B]);
+		let BC=board.create('segment',[B,C]);
+		
+		let E=board.create('point',[2,Math.sqrt(3)],{name:'E',visible:()=>butt.value});
+		let OE=board.create('segment',[O,E],{strokeColor:'red',dash:1,visible:()=>butt.value});
+		let CE=board.create('segment',[C,E],{strokeColor:'red',dash:1,visible:()=>butt.value});
+		let DE=board.create('segment',[D,E],{strokeColor:'yellow',dash:1,visible:()=>butt.value});
+		let c1=board.create('circle',[E,D],{strokeColor:'pink',dash:1,visible:()=>butt.value});
+	}),
+	new Board('对称：(DE^2+BF^2)^(1/2)最小值',function(board,butt){
+		let A=board.create('point',[-2.5,2]);
+		let B=board.create('point',[-2.5,-2]);
+		let C=board.create('point',[2.5,-2]);
+		let D=board.create('point',[2.5,2]);
+		
+		let AB=board.create('segment',[A,B]);
+		let BC=board.create('segment',[C,B]);
+		let CD=board.create('segment',[C,D]);
+		let AD=board.create('segment',[A,D]);
+		let AC=board.create('segment',[A,C]);
+		let BD=board.create('segment',[B,D]);
+		
+		let O=board.create('point',[0,0],{name:'O'});
+		let E=board.create('glider', [2.5,1.5,CD],{color:'green',fixed:false,name:'E'});
+		
+		let EO=board.create('segment',[E,O]);
+		
+		let perp = board.create('perpendicular', [EO, O],{visible:false});
+		
+		let F=board.create('intersection',[perp,BC],{name:'F'});
+		let FO=board.create('segment',[F,O]);
+		
+		let M=board.create('intersection',[EO,AB],{name:'M',visible:()=>butt.value});
+		
+		let MO=board.create('segment',[M,O],{strokeColor:'red',dash:1,visible:()=>butt.value});
+		let MF=board.create('segment',[M,F],{strokeColor:'red',dash:1,visible:()=>butt.value});
+		let N=board.create('midpoint',[M,F],{size:4,color:'blue',name:'M',visible:()=>butt.value});
+		let NO=board.create('segment',[N,O],{strokeColor:'red',dash:1,visible:()=>butt.value});
+		let NB=board.create('segment',[N,B],{strokeColor:'red',dash:1,visible:()=>butt.value});
+	}),
+	new Board('面积转化：AF+CG+DH最(大/小)值',function(board,butt){
+		let A=board.create('point',[-2,2]);
+		let B=board.create('point',[-2,-2]);
+		let C=board.create('point',[2,-2]);
+		let D=board.create('point',[2,2]);
+		
+		let AB=board.create('segment',[A,B]);
+		let BC=board.create('segment',[C,B]);
+		let CD=board.create('segment',[C,D]);
+		let AD=board.create('segment',[A,D]);
+		
+		let E=board.create('glider', [2,-1,CD],{color:'green',fixed:false});
+		
+		let BE=board.create('line',[B,E],{straightFirst:false, straightLast:true});
+			
+		let F=board.create('perpendicularpoint', [A,BE]);
+		let G=board.create('perpendicularpoint', [C,BE]);
+		let H=board.create('perpendicularpoint', [D,BE]);
+		
+		let AF=board.create('segment',[A,F]);
+		let CG=board.create('segment',[C,G]);
+		let DH=board.create('segment',[D,H]);
+		
+		let BD=board.create('segment',[B,D],{strokeColor:'red',dash:1,visible:()=>butt.value});
+		let AE=board.create('segment',[A,E],{strokeColor:'red',dash:1,visible:()=>butt.value});
+	}),
+	new Board('相似转化：DE最大值',function(board,butt,rotate){
+		let A=board.create('point',[-Math.sqrt(5)/2.5,-1]);
+		let B=board.create('point',[Math.sqrt(5)/2.5,-1]);
+		let O=board.create('point',[0,-1],{name:'O'});
+		let C=board.create('point',[B,rotate(O,Math.PI-2*Math.atan(1/2))],{name:'C'});
+		let arc=board.create('arc',[O,A,B],{visible:false});
+		let D=board.create('glider', [0,-Math.sqrt(5)/2.5-1,arc],{color:'green',fixed:false,name:'D'});
+		let E=board.create('point',[D,rotate(C,Math.PI/2,2)],{name:'E'});
+		
+		let c=board.create('circle',[O,A]);
+		let AB=board.create('segment',[A,B]);
+		let BC=board.create('segment',[C,B]);
+		let AC=board.create('segment',[A,C]);
+		let CD=board.create('segment',[C,D]);
+		let DE=board.create('segment',[E,D],{strokeColor:'black'});
+		let CE=board.create('segment',[C,E]);
+		board.create('polygon', [C,D,E],{color:'red',visible:()=>butt.value});
+		
+	}),
+	new Board('相似系数化：2BE/3+AE最小值',function(board,butt,rotate){
+		let A=board.create('point',[4,0]);
+		let B=board.create('point',[0,3]);
+		let C=board.create('point',[2,0]);
+		let D=board.create('point',[0,2]);
+		
+		let O=board.create('point',[0,0],{name:'O'});
+		
+		let arc=board.create('arc',[O,C,D],{fixed:true});
+		let E=board.create('glider',[0.5,1.8,arc],{color:'green',fixed:false,name:'E'});
+		
+		let AB=board.create('segment',[A,B]);
+		let BE=board.create('segment',[E,B],{strokeColor:'black'});
+		let AE=board.create('segment',[A,E],{strokeColor:'black'});
+		
+		board.create('segment', [[5,0], O], {firstArrow: {type: 1}, point1: {name: 'x'}});
+		board.create('segment', [[0,4], O], {firstArrow: {type: 1}, point1: {name: 'y'}});
+		let F=board.create('point',[0,4/3],{name:'F',visible:()=>butt.value});
+		
+		let EO=board.create('segment',[E,O],{strokeColor:'red',dash:1,visible:()=>butt.value});
+		let FA=board.create('segment',[F,A],{strokeColor:'red',dash:1,visible:()=>butt.value});
+		let FE=board.create('segment',[F,E],{strokeColor:'red',dash:1,visible:()=>butt.value});
+		
+	},[2,2]),
+	new Board('三角函数化：AD/2+BD最小值',function(board,butt,rotate){
+		let A=board.create('point',[-6,0]);
+		let B=board.create('point',[6,5]);
+		let C=board.create('point',[6,0]);
+		let AC=board.create('line',[A,C],{fixed:true,name:'l'});
+		let D=board.create('glider',[5.3,0,AC],{color:'green',fixed:false});
+		
+		let AB=board.create('segment',[A,B],{name:'13'});
+		let BC=board.create('segment',[B,C],{name:'5'});
+		let AD=board.create('segment',[A,D],{strokeColor:'black'});
+		let BD=board.create('segment',[B,D],{strokeColor:'black'});
+		
+		let E=board.create('point', [C,rotate(A,-Math.PI/6)],{visible:false});
+		let AE=board.create('segment',[A,E],{strokeColor:'red',dash:1,visible:()=>butt.value});
+		board.create('angle', [E,A,C], { radius:0.8,visible:()=>butt.value ,name:'30°'});
+		
+		let F= board.create('perpendicularpoint', [AE, B],{strokeColor:'red',dash:1,visible:()=>butt.value,name:'F'});
+		let M= board.create('perpendicularpoint', [AE, D],{strokeColor:'red',dash:1,visible:()=>butt.value,name:'M'});
+		let FB=board.create('segment',[F,B],{strokeColor:'red',dash:1,visible:()=>butt.value});
+		let DM=board.create('segment',[D,M],{strokeColor:'red',dash:1,visible:()=>butt.value});
+		let DBF=board.create('perpendicularsegment',[FB,D],{strokeColor:'red',dash:1,visible:()=>butt.value});
+		
+	},[0,1],0.3),
+	new Board('轨迹最值：AM最(小/大)值',function(board,butt,rotate){
+		let A=board.create('point',[3,4]);
+		let c=board.create('circle',[A,3]);
+		let N=board.create('glider',[1,1,c],{color:'green',fixed:false,name:'N'});
+		let O=board.create('point',[0,0],{name:'O'});
+		let M=board.create('point',[N,rotate(O,Math.PI/2)],{name:'M'});
+
+		let ON=board.create('segment',[O,N]);
+		let OM=board.create('segment',[O,M]);
+		let AM=board.create('segment',[A,M],{strokeColor:'black'});
+		
+		board.create('segment', [[8,0], [-8,0]], {firstArrow: {type: 1}, point1: {name: 'x'}});
+		board.create('segment', [[0,10], O], {firstArrow: {type: 1}, point1: {name: 'y'}});
+		
+		let F=board.create('point',[-4,3],{name:'A\'',visible:()=>butt.value});
+		let c1=board.create('circle',[F,M],{strokeColor:'red',dash:1,visible:()=>butt.value});
+		let FA=board.create('segment',[F,A],{strokeColor:'red',dash:1,visible:()=>butt.value});
+		let FM=board.create('segment',[F,M],{strokeColor:'red',dash:1,visible:()=>butt.value});
+		
+	},[0,2],0.3),
+	new Board('三动点垂直三角形：PQ+QH+HP最小值',function(board,butt,rotate){
+		let B=board.create('point',[-2,0],{name:'B'});
+		let C=board.create('point',[2,0],{name:'C'});
+		let A=board.create('point',[C,rotate(B,Math.PI/3)],{name:'A'});
+		
+		let AB=board.create('segment',[A,B]);
+		let BC=board.create('segment',[B,C]);
+		let CA=board.create('segment',[C,A]);
+		
+		let Q=board.create('glider',[-1,1.8,AB],{color:'green',fixed:false,name:'Q'});
+		let P=board.create('glider',[-0.5,0,BC],{color:'green',fixed:false,name:'P'});
+		let H=board.create('glider',[1.5,1,CA],{color:'green',fixed:false,name:'H'});
+		
+		let QP=board.create('segment',[Q,P],{strokeColor:'black'});
+		let PH=board.create('segment',[P,H],{strokeColor:'black'});
+		let HQ=board.create('segment',[H,Q],{strokeColor:'black'});
+		
+		let M=board.create('reflection', [P,AB],{name:'M',visible:()=>butt.value});
+		let N=board.create('reflection', [P,CA],{name:'N',visible:()=>butt.value});
+		
+		let MQ=board.create('segment',[M,Q],{strokeColor:'red',dash:1,visible:()=>butt.value});
+		let MP=board.create('segment',[M,P],{strokeColor:'red',dash:1,visible:()=>butt.value});
+		let NH=board.create('segment',[N,H],{strokeColor:'red',dash:1,visible:()=>butt.value});
+		let NP=board.create('segment',[N,P],{strokeColor:'red',dash:1,visible:()=>butt.value});
+		let NM=board.create('segment',[N,M],{strokeColor:'red',visible:()=>butt.value});
+		let MA=board.create('segment',[M,A],{strokeColor:'yellow',dash:1,visible:()=>butt.value});
+		let NA=board.create('segment',[N,A],{strokeColor:'yellow',dash:1,visible:()=>butt.value});
+		let AP=board.create('segment',[A,P],{strokeColor:'yellow',dash:1,visible:()=>butt.value});
+		
+	},[0,2]),
+	new Board('旋转最值：PA+PB+PC最小值',function(board,butt,rotate){
+		let A=board.create('point',[3,0]);
+		let B=board.create('point',[0,6]);
+		let C=board.create('point',[0,0]);
+		let P=board.create('point',[1,1],{color:'green',fixed:false,name:'P'});
+		
+		let AB=board.create('segment',[A,B]);
+		let BC=board.create('segment',[B,C]);
+		let CA=board.create('segment',[C,A]);
+		let PA=board.create('segment',[P,A],{strokeColor:'black'});
+		let PB=board.create('segment',[P,B],{strokeColor:'black'});
+		let PC=board.create('segment',[P,C],{strokeColor:'black'});
+		
+		let M=board.create('point',[B,rotate(A,-Math.PI/3)],{name:'M',visible:()=>butt.value});
+		let N=board.create('point',[P,rotate(A,-Math.PI/3)],{name:'N',visible:()=>butt.value});
+		
+		let MN=board.create('segment',[M,N],{strokeColor:'red',dash:1,visible:()=>butt.value});
+		let MA=board.create('segment',[M,A],{strokeColor:'red',dash:1,visible:()=>butt.value});
+		let NA=board.create('segment',[N,A],{strokeColor:'red',dash:1,visible:()=>butt.value});
+		let NP=board.create('segment',[N,P],{strokeColor:'red',dash:1,visible:()=>butt.value});
+		let MC=board.create('segment',[M,C],{strokeColor:'red',visible:()=>butt.value});
+		
+		board.create('polygon', [A, B, P],{color:'red',visible:()=>butt.value});
+		board.create('polygon', [A, M, N],{color:'red',visible:()=>butt.value});
+		board.create('angle', [N,A,P], { radius:0.8,visible:()=>butt.value ,name:'60°'});
+	},[2,2],.6),
+	new Board('中考定点定长隐形圆：A\'C最小值',function(board,butt,rotate){
+		let A=board.create('point',[-1,0]);
+		let B=board.create('point',[1,0]);
+		let C=board.create('point',[A,rotate(B,-2*Math.PI/3)]);
+		let D=board.create('point',[B,rotate(A,Math.PI/3)]);
+		
+		let AB=board.create('segment',[A,B]);
+		let BC=board.create('segment',[B,C]);
+		let CD=board.create('segment',[C,D]);
+		let DA=board.create('segment',[D,A]);
+		
+		let M=board.create('midpoint',[DA],{name:'M'});
+		let N=board.create('glider',[-0.3,0,AB],{color:'green',fixed:false,name:'N'});
+		
+		let MN=board.create('segment',[M,N]);
+		
+		let G=board.create('reflection', [A,MN],{name:'A\''});
+		
+		let MG=board.create('segment',[M,G]);
+		let GN=board.create('segment',[G,N]);
+		let GC=board.create('segment',[G,C]);
+		
+		let c=board.create('circle',[M,A],{strokeColor:'red',dash:1,visible:()=>butt.value});
+		
+		board.create('angle', [B,A,D], { radius:0.4,visible:()=>butt.value ,name:'60°'});
+	},[1,2],1.2),
+	new Board('圆周角恒等',function(board,butt,rotate){
+		let O=board.create('point',[0,0],{name:'O'});
+		let c=board.create('circle',[O,2.5]);
+		let A=board.create('glider',[0,2.5,c],{color:'green',fixed:false,name:'A'});
+		let B=board.create('glider',[-1.3,-2,c],{name:'B'});
+		let C=board.create('glider',[0.8,-2,c],{name:'C'});
+		let AB=board.create('segment',[A,B],{strokeColor:'black'});
+		let AC=board.create('segment',[A,C],{strokeColor:'black'});
+		
+		let D=board.create('point',[A,rotate(O,Math.PI)],{name:'D',visible:()=>butt.value});
+		let AD=board.create('segment',[A,D],{strokeColor:'red',dash:1,visible:()=>butt.value});
+		let OB=board.create('segment',[O,B],{strokeColor:'red',dash:1,visible:()=>butt.value});
+		let OC=board.create('segment',[O,C],{strokeColor:'red',dash:1,visible:()=>butt.value});
+	}),
+	new Board('证明CD=GF',function(board,butt,rotate){
+		let A=board.create('point',[-3,0]);
+		let B=board.create('point',[3,0]);
+		let O=board.create('point',[0,0],{name:'O'});
+		let arc=board.create('arc',[O,B,A]);
+		let C=board.create('glider',[-1,2.5,arc],{color:'green',fixed:false,name:'C'});
+		let E=board.create('glider',[2,1.5,arc],{color:'green',fixed:false,name:'E'});
+		let AB=board.create('segment',[A,B]);
+		let D= board.create('perpendicularpoint', [AB,C],{name:'D'});
+		let F= board.create('perpendicularpoint', [AB,E],{name:'F'});
+		let CD=board.create('segment',[C,D],{strokeColor:'black'});
+		let EF=board.create('segment',[E,F]);
+		let CO=board.create('line',[C,O],{straightFirst:false, straightLast:true});
+		let G= board.create('perpendicularpoint', [CO,E],{name:'G'});
+		let EG=board.create('segment',[E,G]);
+		let GF=board.create('segment',[G,F],{strokeColor:'black'});
+		let EO=board.create('segment',[E,O],{strokeColor:'red',dash:1,visible:()=>butt.value});
+		let H= board.create('perpendicularpoint', [AB,G],{name:'H',visible:()=>butt.value});
+		let GH=board.create('segment',[G,H],{strokeColor:'red',dash:1,visible:()=>butt.value});
+		let X= board.create('circumcenter',[O,G,F],{name:'X',color:'red',visible:()=>butt.value});
+	},[0,1.5]),
+	new Board('证明PBC是正三角形',function(board,butt,rotate){
+		let A=board.create('point',[-2,2]);
+		let B=board.create('point',[-2,-2]);
+		let C=board.create('point',[2,-2]);
+		let D=board.create('point',[2,2]);
+		let P=board.create('point',[C,rotate(B,Math.PI/3)],{name:'P'});
+		let AB=board.create('segment',[A,B]);
+		let BC=board.create('segment',[B,C]);
+		let CD=board.create('segment',[C,D]);
+		let DA=board.create('segment',[D,A]);
+		let PB=board.create('segment',[P,B],{strokeColor:'black'});
+		let PC=board.create('segment',[P,C],{strokeColor:'black'});
+		let PA=board.create('segment',[P,A],{strokeColor:'black'});
+		let PD=board.create('segment',[P,D],{strokeColor:'black'});
+		board.create('angle', [A,D,P], { radius:0.4,name:'15°'});
+		board.create('angle', [P,A,D], { radius:0.4,name:'15°'});
+		let Q=board.create('point',[B,rotate(A,Math.PI/3)],{name:'Q',color:'red',visible:()=>butt.value});
+		let QD=board.create('segment',[Q,D],{strokeColor:'red',dash:1,visible:()=>butt.value});
+		let QC=board.create('segment',[Q,C],{strokeColor:'red',dash:1,visible:()=>butt.value});
+		let QP=board.create('segment',[Q,P],{strokeColor:'red',dash:1,visible:()=>butt.value});
+		board.create('polygon', [P,A,D],{color:'brown',visible:()=>butt.value});
+		board.create('polygon', [Q,C,D],{color:'brown',visible:()=>butt.value});
+	})
+];
+ppt(x);
+</script>
